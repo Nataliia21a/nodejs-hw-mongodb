@@ -1,4 +1,3 @@
-// KEY = MCk0aZZzFWFfHreU;
 import mongoose from 'mongoose';
 import { env } from '../utils/env.js';
 
