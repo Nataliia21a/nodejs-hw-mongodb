@@ -1,4 +1,6 @@
 import { Schema, model } from 'mongoose';
+import { contactTypeList } from '../../constants/contacts.js';
+import { handlerSaveError, saveUpdateOptions } from './hooks.js';
 
 const contactSchema = new Schema(
   {
@@ -21,13 +23,22 @@ const contactSchema = new Schema(
     },
     contactType: {
       type: String,
-      enum: ['work', 'home', 'personal'],
+      enum: contactTypeList,
       default: 'personal',
     },
   },
   { versionKey: false, timestamps: true },
 );
 
+// якщо після (post) збереження (методу запитів до бази create ) сталась помилка - виконай наступну функцію, де можна вказати статус помилки
+contactSchema.post('save', handlerSaveError);
+
+contactSchema.pre('findOneAndUpdate', saveUpdateOptions);
+
+contactSchema.post('findOneAndUpdate', handlerSaveError);
+
 const ContactColection = model('contact', contactSchema);
+
+export const sortFields = ['name'];
 
 export default ContactColection;
