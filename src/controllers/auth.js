@@ -1,24 +1,6 @@
-import createHttpError from 'http-errors';
-import { singUp, singIn } from '../services/auth.js';
+import { signUp, signIn, refreshSession, signout } from '../services/auth.js';
 
-export const singUpController = async (req, res) => {
-  const newUser = await singUp(req.body);
-
-  res.status(201).json({
-    status: 201,
-    message: 'Successfully registered a user!',
-    data: {
-      name: newUser.name,
-      createdAt: newUser.createdAt,
-      updatedAt: newUser.updatedAt,
-      _id: newUser._id,
-    },
-  });
-};
-
-export const singInController = async (req, res) => {
-  const session = await singIn(req.body);
-
+const setUpSession = (res, session) => {
   res.cookie('refreshToken', session.refreshToken, {
     httpOnly: true,
     expire: new Date(Date.now() + session.refreshTokenValidUntil),
@@ -28,6 +10,22 @@ export const singInController = async (req, res) => {
     httpOnly: true,
     expire: new Date(Date.now() + session.refreshTokenValidUntil),
   });
+};
+
+export const signUpController = async (req, res) => {
+  const newUser = await signUp(req.body);
+
+  res.status(201).json({
+    status: 201,
+    message: 'Successfully registered a user!',
+    data: newUser,
+  });
+};
+
+export const signInController = async (req, res) => {
+  const session = await signIn(req.body);
+
+  setUpSession(res, session);
 
   res.json({
     status: 200,
@@ -36,4 +34,30 @@ export const singInController = async (req, res) => {
       accessToken: session.accessToken,
     },
   });
+};
+
+export const refreshController = async (req, res) => {
+  const { refreshToken, sessionId } = req.cookies;
+  const session = await refreshSession({ refreshToken, sessionId });
+
+  setUpSession(res, session);
+
+  res.json({
+    status: 200,
+    message: 'Successfully refresh session!',
+    data: {
+      accessToken: session.accessToken,
+    },
+  });
+};
+
+export const signoutController = async (req, res) => {
+  const { sessionId } = req.cookies;
+  if (sessionId) {
+    await signout(sessionId);
+  }
+  res.clearCookie('sessionId');
+  res.clearCookie('refreshToken');
+
+  res.status(204).send();
 };

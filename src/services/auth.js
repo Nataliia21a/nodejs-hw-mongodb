@@ -8,12 +8,20 @@ import {
   refreshTokenLifeTime,
 } from '../constants/users.js';
 
-export const singUp = async (payload) => {
-  //для видалення пароля з об"єкту відповіді при успішній реєстрації користувача
-  //   const data = await userCollection.create(payload);
-  //   delete data._doc.password;
-  //   return data._doc;
+const createSession = () => {
+  const accessToken = randomBytes(30).toString('base64');
+  const refreshToken = randomBytes(30).toString('base64');
+  const accessTokenValidUntil = new Date(Date.now() + accessTokenLifeTime);
+  const refreshTokenValidUntil = new Date(Date.now() + refreshTokenLifeTime);
 
+  return {
+    accessToken,
+    refreshToken,
+    accessTokenValidUntil,
+    refreshTokenValidUntil,
+  };
+};
+export const signUp = async (payload) => {
   const { email, password } = payload;
   const userEmail = await userCollection.findOne({ email });
   if (userEmail) {
@@ -21,15 +29,17 @@ export const singUp = async (payload) => {
   }
 
   const hashPassword = await bcrypt.hash(password, 10);
-  const user = await userCollection.create({
+
+  const data = await userCollection.create({
     ...payload,
     password: hashPassword,
   });
-
-  return user;
+  //для видалення пароля з об"єкту відповіді при успішній реєстрації користувача
+  delete data._doc.password;
+  return data._doc;
 };
 
-export const singIn = async (payload) => {
+export const signIn = async (payload) => {
   const { email, password } = payload;
   const user = await userCollection.findOne({ email });
   if (!user) {
@@ -42,18 +52,50 @@ export const singIn = async (payload) => {
   if (!passwordCompare) {
     throw createHttpError(401, 'Email or password invalid');
   }
-  const accessToken = randomBytes(30).toString('base64');
-  const refreshToken = randomBytes(30).toString('base64');
-  const accessTokenValidUntil = new Date(Date.now() + accessTokenLifeTime);
-  const refreshTokenValidUntil = new Date(Date.now() + refreshTokenLifeTime);
+
+  //створення нової сесії
+  const sessionData = createSession();
 
   const userSession = await SessionCollection.create({
     userId: user._id,
-    accessToken,
-    refreshToken,
-    accessTokenValidUntil,
-    refreshTokenValidUntil,
+    ...sessionData,
   });
 
   return userSession;
 };
+
+export const findSessionByAccessToken = (accessToken) =>
+  SessionCollection.findOne({ accessToken });
+
+export const refreshSession = async ({ refreshToken, sessionId }) => {
+  const oldSession = await SessionCollection.findOne({
+    _id: sessionId,
+    refreshToken,
+  });
+
+  if (!oldSession) {
+    throw createHttpError(401, 'Session not found');
+  }
+
+  if (new Date() > oldSession.refreshTokenValidUntil) {
+    throw createHttpError(401, 'Session token expired');
+  }
+
+  await SessionCollection.deleteOne({ _id: sessionId });
+
+  //створення нової сесії
+  const sessionData = createSession();
+
+  const userSession = await SessionCollection.create({
+    userId: oldSession._id,
+    ...sessionData,
+  });
+
+  return userSession;
+};
+
+export const signout = async (sessionId) => {
+  await SessionCollection.deleteOne({ _id: sessionId });
+};
+
+export const findUser = (filter) => userCollection.findOne(filter);
