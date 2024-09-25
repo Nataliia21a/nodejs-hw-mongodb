@@ -12,19 +12,19 @@ import {
 const authRouter = Router();
 
 authRouter.post(
-  '/signup',
+  '/register',
   validateBody(userSignUpSchema),
   ctrlWrapper(signUpController),
 );
 
 authRouter.post(
-  '/signin',
+  '/login',
   validateBody(userSignInSchema),
   ctrlWrapper(signInController),
 );
 
 authRouter.post('/refresh', ctrlWrapper(refreshController));
 
-authRouter.post('/signout', ctrlWrapper(signoutController));
+authRouter.post('/logout', ctrlWrapper(signoutController));
 
 export default authRouter;
