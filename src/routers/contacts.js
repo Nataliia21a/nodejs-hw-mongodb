@@ -18,6 +18,7 @@ import {
 import { isValidId } from '../middlewares/isValidId.js';
 
 import authenticate from '../middlewares/authenticate.js';
+import upload from '../middlewares/upload.js';
 
 const contactsRouter = Router();
 
@@ -27,8 +28,11 @@ contactsRouter.get('/', ctrlWrapper(getAllContactsController));
 
 contactsRouter.get('/:id', isValidId, ctrlWrapper(getContactByIdController));
 
+// upload.fields([{name: "photo", maxCount: 1}, {name: "prevPhoto", maxCount: 2}]) очікуємо кілька файлів в різних полях
+//upload.array("photo", 8) - означає, що в поле "photo" може прийти одночасно до 8 файлів
 contactsRouter.post(
   '/',
+  upload.single('photo'),
   validateBody(contactAddSchema),
   ctrlWrapper(addContactController),
 );
@@ -36,6 +40,7 @@ contactsRouter.post(
 contactsRouter.put(
   '/:id',
   isValidId,
+  upload.single('photo'),
   validateBody(contactAddSchema),
   ctrlWrapper(upsertContactController),
 );
@@ -43,6 +48,7 @@ contactsRouter.put(
 contactsRouter.patch(
   '/:id',
   isValidId,
+  upload.single('photo'),
   validateBody(contactPatchSchema),
   ctrlWrapper(patchContactController),
 );

@@ -22,6 +22,9 @@ export const setupServer = () => {
   app.use(express.json());
   app.use(cookieParser());
 
+  //якщо приходить запит на статичний файл, перевіряється папка uploads, якщо файл там є - він повертається фронтенду
+  app.use(express.static('uploads'));
+
   app.use('/contacts', contactsRouter);
   app.use('/auth', authRouter);
 
