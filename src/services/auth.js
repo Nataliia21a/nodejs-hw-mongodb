@@ -15,6 +15,7 @@ import handlebars from 'handlebars';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { TEMPLATES_DIR } from '../constants/index.js';
+import { validateCode } from '../utils/googleOAuth2.js';
 
 const createSession = () => {
   const accessToken = randomBytes(30).toString('base64');
@@ -62,6 +63,33 @@ export const signIn = async (payload) => {
   }
 
   //створення нової сесії
+  const sessionData = createSession();
+
+  const userSession = await SessionCollection.create({
+    userId: user._id,
+    ...sessionData,
+  });
+
+  return userSession;
+};
+
+export const loginOrRegisterWithGoogleOauth = async (code) => {
+  const loginTicket = await validateCode(code);
+  const payload = loginTicket.getPayload();
+  let user = await userCollection.findOne({ email: payload.email });
+
+  if (!user) {
+    const password = randomBytes(10);
+    const hashPassword = await bcrypt.hash(password, 10);
+    user = await userCollection.create({
+      email: payload.email,
+      name: payload.name,
+      password: hashPassword,
+      verify: true,
+    });
+    delete user._doc.password;
+  }
+
   const sessionData = createSession();
 
   const userSession = await SessionCollection.create({
